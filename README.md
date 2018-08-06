@@ -3,7 +3,7 @@
 Traverses a folder and parses PDFs encountered. Use in the CLI. e.g.
 
 ```
-pdf-search 'Registration certificate' --maxpages 4 -a 07/24 -b 08/01 -i
+pdfsearch 'Registration certificate' --maxpages 4 -a 07/24 -b 08/01 -i
 Searching C:\Users\bsamm\Google Drive\Scanned for files matching /Registration\s+certificate/gim with less than 4 pages, created (strictly) between "7/24/2018, 12:00:00 AM" and "8/1/2018, 12:00:00 AM"
 
 > C:\Users\bsamm\Google Drive\Scanned\2018_07_25_07_47_00.pdf Matching Content REGISTRATION  CERTIFICATE

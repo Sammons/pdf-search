@@ -1,12 +1,12 @@
-import * as pdf from 'pdf-parse';
-import * as fs from 'fs';
-import * as path from 'path';
-import * as fileType from 'file-type';
-import * as util from 'util';
+import chalk from 'chalk';
 import * as commander from 'commander';
+import * as fileType from 'file-type';
+import * as fs from 'fs';
 import * as moment from 'moment';
 import * as os from 'os';
-import chalk from 'chalk';
+import * as path from 'path';
+import * as pdf from 'pdf-parse';
+import * as util from 'util';
 
 const fsp = {
   readFile: util.promisify(fs.readFile),
@@ -21,7 +21,7 @@ type Handler = (
   path: string,
   stats: fs.Stats,
   data: ReturnType<typeof pdf> extends Promise<infer R> ? R : never
-) => Promise<any>
+) => Promise<any>;
 
 type Opts = {
   after?: Date;
@@ -36,9 +36,14 @@ type Opts = {
   quiet: boolean;
   updated: boolean;
   insensitive: boolean;
-}
+};
 
-async function ProcessElement(opts: Opts, dir: string, name: string, handler: Handler): Promise<void> {
+async function ProcessElement(
+  opts: Opts,
+  dir: string,
+  name: string,
+  handler: Handler
+): Promise<void> {
   const fspath = path.join(dir, name);
   try {
     const fstats = await fsp.stat(fspath);
@@ -57,52 +62,52 @@ async function ProcessElement(opts: Opts, dir: string, name: string, handler: Ha
     }
     if (file.fstats.isCharacterDevice()) {
       if (!opts.quiet) {
-        console.log(chalk.bold.gray('Skipping character device'), fspath);
+        console.log(chalk.bold.gray("Skipping character device"), fspath);
       }
       return;
     }
     if (file.fstats.isBlockDevice()) {
       if (!opts.quiet) {
-        console.log(chalk.bold.gray('Skipping Block Device'), fspath);
+        console.log(chalk.bold.gray("Skipping Block Device"), fspath);
       }
-      return
+      return;
     }
     if (file.fstats.isFIFO()) {
       if (!opts.quiet) {
-        console.log(chalk.bold.gray('Skipping FIFO'), fspath);
+        console.log(chalk.bold.gray("Skipping FIFO"), fspath);
       }
-      return
+      return;
     }
     if (file.fstats.isSocket()) {
       if (!opts.quiet) {
-        console.log(chalk.bold.gray('Skipping Socket'), fspath);
+        console.log(chalk.bold.gray("Skipping Socket"), fspath);
       }
-      return
+      return;
     }
     if (file.fstats.isFile()) {
       try {
-        if (path.parse(fspath).ext !== '.pdf') {
+        if (path.parse(fspath).ext !== ".pdf") {
           return;
         }
         const contents = await fsp.readFile(fspath);
         const inferredType = fileType(contents);
-        if (!inferredType || inferredType.ext !== 'pdf') {
+        if (!inferredType || inferredType.ext !== "pdf") {
           if (!opts.quiet) {
-            console.log(chalk.bold.gray('Skipping non-pdf file'), fspath);
+            console.log(chalk.bold.gray("Skipping non-pdf file"), fspath);
           }
           return;
         }
         const parsed = await pdf(contents);
-        await handler(name, fspath, fstats, parsed)
+        await handler(name, fspath, fstats, parsed);
       } catch (err) {
         if (!opts.quiet) {
-          console.log(chalk.bold.gray('Skipping'), fspath, err.message)
+          console.log(chalk.bold.gray("Skipping"), fspath, err.message);
         }
       }
     }
   } catch (err) {
     if (!opts.quiet) {
-      console.log(chalk.bold.gray('Skipping'), fspath, err.message)
+      console.log(chalk.bold.gray("Skipping"), fspath, err.message);
     }
   }
 }
@@ -110,95 +115,102 @@ async function ProcessElement(opts: Opts, dir: string, name: string, handler: Ha
 async function WalkDir(opts: Opts, dir: string, handler: Handler) {
   const dirstats = await fsp.stat(dir);
   if (!dirstats.isDirectory()) {
-    console.log(chalk.bold.redBright('Location is not a directory'), dir);
+    console.log(chalk.bold.redBright("Location is not a directory"), dir);
     return;
   }
   try {
     const elements = await fsp.readdir(dir);
-    await Promise.all(elements.map(element => ProcessElement(opts, dir, element, handler)))
+    await Promise.all(
+      elements.map(element => ProcessElement(opts, dir, element, handler))
+    );
   } catch (err) {
     if (!opts.quiet) {
-      console.log(chalk.bold.grey('Skipping'), dir, err.message)
+      console.log(chalk.bold.grey("Skipping"), dir, err.message);
     }
   }
 }
 
 const dateFmts = [
-  'MM-DD',
-  'DD-MM', // if month exceeds 12
-  'MM/DD/YYYY',
-  'DD/MM/YYYY', // if month exceeds 12 
-  'MM-DD-YYYY',
-  'DD-MM-YYYY', // if month exceeds 12
-  'YYYY-MM-DD',
-  'YYYY-MM-DDThh-mm-ss.SSS', // ISO is the best
-  'YYYY-MM-DD:hh:mmA',
-  'YYYY-MM-DD:hh:mm',
-  'hh:mmA'
+  "MM-DD",
+  "DD-MM", // if month exceeds 12
+  "MM/DD/YYYY",
+  "DD/MM/YYYY", // if month exceeds 12
+  "MM-DD-YYYY",
+  "DD-MM-YYYY", // if month exceeds 12
+  "YYYY-MM-DD",
+  "YYYY-MM-DDThh-mm-ss.SSS", // ISO is the best
+  "YYYY-MM-DD:hh:mmA",
+  "YYYY-MM-DD:hh:mm",
+  "hh:mmA"
 ];
 
 commander
-  .version('0.1.0')
-  .usage('<dirpath> <pattern> [options]')
-  .description('Recursively searches the <dirpath> attempting to match the <pattern> e.g. C:/users/xyz/documents "some text.*and some other text"')
+  .version("0.1.0")
+  .usage("<path> <pattern> [options]")
+  .description(
+    'Recursively searches the <path> attempting to match the <pattern> e.g. C:/users/xyz/documents "some text.*and some other text"'
+  )
   .option(
-    '-a, --after <after>',
-    'Match files created exclusively after this date/datetime.' + os.EOL +
-    `\tAcceptable formats (in order of precedence): ${os.EOL}${dateFmts.map(f => `\t\t[${f}]`).join(os.EOL)}`,
+    "-a, --after <after>",
+    "Match files created exclusively after this date/datetime." +
+      os.EOL +
+      `\tAcceptable formats (in order of precedence): ${os.EOL}${dateFmts
+        .map(f => `\t\t[${f}]`)
+        .join(os.EOL)}`,
     s => moment(s, dateFmts).toDate()
   )
   .option(
-    '-b, --before <before>',
-    'Match files created exclusively before this date/datetime.' + os.EOL +
-    `\tAcceptable formats (in order of precedence): ${os.EOL}${dateFmts.map(f => `\t\t[${f}]`).join(os.EOL)}`,
+    "-b, --before <before>",
+    "Match files created exclusively before this date/datetime." +
+      os.EOL +
+      `\tAcceptable formats (in order of precedence): ${os.EOL}${dateFmts
+        .map(f => `\t\t[${f}]`)
+        .join(os.EOL)}`,
     s => moment(s, dateFmts).toDate()
   )
   .option(
-    '--minpages <minpages>',
-    'Match files with more than this many pages.',
+    "--minpages <minpages>",
+    "Match files with more than this many pages.",
     s => Number.parseInt(s, 10)
   )
   .option(
-    '--maxpages <maxpages>',
-    'Match files with less than this many pages.',
+    "--maxpages <maxpages>",
+    "Match files with less than this many pages.",
     s => Number.parseInt(s, 10)
   )
   .option(
-    '--maxmb <maxmb>',
-    'Match files with less than this many megabytes.',
+    "--maxmb <maxmb>",
+    "Match files with less than this many megabytes.",
     s => Number.parseInt(s, 10)
   )
   .option(
-    '--minmb <minmb>',
-    'Match files with more than this many megabytes.',
+    "--minmb <minmb>",
+    "Match files with more than this many megabytes.",
     s => Number.parseInt(s, 10)
   )
+  .option("--notnames", "Ignore matches in file names", s => true)
   .option(
-    '--notnames',
-    'Ignore matches in file names',
+    "--updated",
+    "Consider last updated time instead of created time",
     s => true
   )
   .option(
-    '--updated',
-    'Consider last updated time instead of created time',
-    s => true
+    "-q, --quiet",
+    "Do not output the pre-search description, or the match description"
   )
-  .option(
-    '-q, --quiet',
-    'Do not output the pre-search description, or the match description'
-  )
-  .option(
-    '-i, --insensitive',
-    'Case insensitive'
-  )
+  .option("-i, --insensitive", "Case insensitive")
   .action((pathstr, patternstr, cmd) => {
-    let p = pathstr;
+    let p = pathstr || "";
+    if (typeof p !== "string") {
+      console.log(chalk.red("Usage: pdfsearch <path> <pattern> [options]"));
+      return commander.help(() => process.exit(1));
+    }
     let pattern = patternstr;
     // validate path
-    p = p.replace(new RegExp('/', 'g'), path.sep);
-    p = p.replace(new RegExp('\\\\', 'g'), path.sep);
-    if (p.includes('~')) {
-      p = path.resolve(p.replace('~', os.homedir()));
+    p = p.replace(new RegExp("/", "g"), path.sep);
+    p = p.replace(new RegExp("\\\\", "g"), path.sep);
+    if (p.includes("~")) {
+      p = path.resolve(p.replace("~", os.homedir()));
       // wierd problems with windows paths
       const doubleDriveWindowsPath = p.match(/(.*?\:.*?)(.\:.*)$/);
       if (doubleDriveWindowsPath && doubleDriveWindowsPath[2]) {
@@ -209,106 +221,136 @@ commander
 
     try {
       if (!p) {
-        console.log(chalk.bold.redBright('No path given!'));
+        console.log(chalk.bold.redBright("No path given!"));
         process.exit(1);
       }
       if (!fs.existsSync(p) || !fs.statSync(p).isDirectory()) {
-        console.log(chalk.bold.redBright('Path does not exist or is not a folder:' + p));
+        console.log(
+          chalk.bold.redBright("Path does not exist or is not a folder:" + p)
+        );
         process.exit(1);
       }
     } catch (err) {
-      console.log(chalk.bold.redBright('Invalid path:'), err.message);
+      console.log(chalk.bold.redBright("Invalid path:"), err.message);
       commander.outputHelp(() => process.exit(1));
     }
 
-    const opts: Opts = cmd instanceof Object && cmd.opts() || {};
+    const opts: Opts = (cmd instanceof Object && cmd.opts()) || {};
     try {
-      if (!pattern) {
-        console.log(chalk.bold.redBright('No pattern given!'));
+      if (!pattern || typeof pattern !== "string") {
+        console.log(
+          chalk.bold.redBright(
+            "No pattern given! Usage: pdfsearch <path> <pattern> [options]"
+          )
+        );
         process.exit(1);
       }
-      if (pattern.includes(' ')) {
+      if (pattern.includes(" ")) {
         // spaces are garbage in pdfs
-        pattern = pattern.replace(' ', '\\s+')
+        pattern = pattern.replace(" ", "\\s+");
       }
-      pattern = new RegExp(pattern, 'gm' + (opts.insensitive ? 'i' : ''));
+      pattern = new RegExp(pattern, "gm" + (opts.insensitive ? "i" : ""));
     } catch (err) {
-      console.log(chalk.bold.redBright('Invalid Pattern:'), err.message)
+      console.log(chalk.bold.redBright("Invalid Pattern:"), err.message);
       process.exit(1);
     }
     opts.path = p;
     opts.pattern = pattern;
-    let description = `Searching ${opts.path} for files matching ${opts.pattern}`
+    let description = `Searching ${opts.path} for files matching ${
+      opts.pattern
+    }`;
     if (opts.minpages && opts.maxpages) {
-      description += ` with (strictly) between ${opts.minpages} and ${opts.maxpages} pages`;
+      description += ` with (strictly) between ${opts.minpages} and ${
+        opts.maxpages
+      } pages`;
     } else if (opts.minpages) {
       description += ` with more than ${opts.minpages} pages`;
     } else if (opts.maxpages) {
       description += ` with less than ${opts.maxpages} pages`;
     }
     if (opts.before && opts.after) {
-      description += `, ${opts.updated ? 'updated' : 'created'} (strictly) between "${opts.after.toLocaleString()}" and "${opts.before.toLocaleString()}"`;
+      description += `, ${
+        opts.updated ? "updated" : "created"
+      } (strictly) between "${opts.after.toLocaleString()}" and "${opts.before.toLocaleString()}"`;
     } else if (opts.after) {
-      description += `, ${opts.updated ? 'updated' : 'created'} after "${opts.after.toLocaleString()}"`;
+      description += `, ${
+        opts.updated ? "updated" : "created"
+      } after "${opts.after.toLocaleString()}"`;
     } else if (opts.before) {
-      description += `, ${opts.updated ? 'updated' : 'created'} before "${opts.before.toLocaleString()}"`;
+      description += `, ${
+        opts.updated ? "updated" : "created"
+      } before "${opts.before.toLocaleString()}"`;
     }
     if (opts.maxmb && opts.minmb) {
-      description += `, (strictly) between ${opts.minmb}MB and ${opts.maxmb}MB in size`
+      description += `, (strictly) between ${opts.minmb}MB and ${
+        opts.maxmb
+      }MB in size`;
     } else if (opts.maxmb) {
-      description += `, less than ${opts.maxmb}MB`
+      description += `, less than ${opts.maxmb}MB`;
     } else if (opts.minmb) {
-      description += `, more than ${opts.minmb}MB`
+      description += `, more than ${opts.minmb}MB`;
     }
 
     if (opts.notnames) {
       description += `, ignoring file names`;
     }
     if (!opts.quiet) {
-      console.log(chalk.whiteBright(description))
+      console.log(chalk.whiteBright(description));
     }
     const SearchFile: Handler = async (name, path, stats, data) => {
-      if (opts.after && !moment(
-        opts.updated ? stats.ctime : stats.birthtime
-      ).isAfter(opts.after)) {
+      if (
+        opts.after &&
+        !moment(opts.updated ? stats.ctime : stats.birthtime).isAfter(
+          opts.after
+        )
+      ) {
         return;
       }
-      if (opts.before && !moment(
-        opts.updated ? stats.ctime : stats.birthtime
-      ).isBefore(opts.before)) {
+      if (
+        opts.before &&
+        !moment(opts.updated ? stats.ctime : stats.birthtime).isBefore(
+          opts.before
+        )
+      ) {
         return;
       }
-      if (data.numpages && opts.maxpages && (data.numpages >= opts.maxpages)) {
+      if (data.numpages && opts.maxpages && data.numpages >= opts.maxpages) {
         return;
       }
-      if (data.numpages && opts.minpages && (data.numpages <= opts.minpages)) {
+      if (data.numpages && opts.minpages && data.numpages <= opts.minpages) {
         return;
       }
       const bytesPerMB = 1e6;
-      if (opts.minmb && (stats.size / bytesPerMB) <= opts.minmb) {
+      if (opts.minmb && stats.size / bytesPerMB <= opts.minmb) {
         return;
       }
-      if (opts.maxmb && (stats.size / bytesPerMB) >= opts.maxmb) {
+      if (opts.maxmb && stats.size / bytesPerMB >= opts.maxmb) {
         return;
       }
       if (!opts.notnames && opts.pattern.test(name)) {
-        console.log(chalk.gray('Matching Name'), chalk.green(path));
+        console.log(chalk.gray("Matching Name"), chalk.green(path));
         return;
       }
       if (opts.pattern.test(data.text)) {
-        console.log(chalk.grey('Matching Content'), chalk.green(path), (data.text.match(opts.pattern) || [])[0]);
+        console.log(
+          chalk.grey("Matching Content"),
+          chalk.green(path),
+          (data.text.match(opts.pattern) || [])[0]
+        );
         return;
       }
-    }
+    };
     return WalkDir(opts, opts.path, SearchFile)
       .catch(e => {
-        console.log('Unhandled error! Please report at github.com/sammons/pdf-searcher', e)
+        console.log(
+          "Unhandled error! Please report at github.com/sammons/pdf-search",
+          e
+        );
         process.exit(1);
       })
       .then(() => {
         process.stdout.resume();
-        process.exit(0)
-      })
+        process.exit(0);
+      });
   })
-  .parse(process.argv)
-
+  .parse(process.argv);
