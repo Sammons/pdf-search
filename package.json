@@ -1,6 +1,6 @@
 {
   "name": "pdf-search",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "searches a folder of pdf files for text",
   "main": "index.js",
   "dependencies": {
@@ -22,6 +22,6 @@
   "author": "Benjamin Sammons",
   "license": "MIT",
   "bin": {
-    "pdfsearch": "./built/index.js"
+    "pdfsearch": "./index.js"
   }
 }
